@@ -77,9 +77,7 @@ JNIEXPORT jboolean JNICALL Java_printer_PrinterLibs_Port_1OpenUsb
 (JNIEnv* env, jclass, jstring port_name)
 {
 	jboolean isCopy;
-	std::cout << "Port_OpenUsb jstring port:[" << port_name << "]" << endl;
 	const char *port = env->GetStringUTFChars(port_name, &isCopy);
-	std::cout << "Port_OpenUsb utf port:[" << port << "]" << endl;
 
 	jboolean res = usb.Open(port) ? JNI_TRUE : JNI_FALSE;
 	if (res == JNI_TRUE) {
@@ -113,10 +111,10 @@ JNIEXPORT jboolean JNICALL Java_printer_PrinterLibs_Port_1OpenLpt
 /*
  * Class:     printer_PrinterLibs
  * Method:    Port_Write
- * Signature: ([BCC)I
+ * Signature: ([BIJ)I
  */
 JNIEXPORT jint JNICALL Java_printer_PrinterLibs_Port_1Write
-(JNIEnv* env, jclass, jbyteArray jBuff, jchar jCnt, jchar jTimeout)
+(JNIEnv* env, jclass, jbyteArray jBuff, jint jCnt, jlong jTimeout)
 {
 	char* pcBuff = NULL;
 	
@@ -133,23 +131,26 @@ JNIEXPORT jint JNICALL Java_printer_PrinterLibs_Port_1Write
 	pos.Write(ucbuf, (size_t)jCnt, (long)jTimeout);
 
 	env->ReleaseByteArrayElements(jBuff, bBuff, 0);
+    delete []pcBuff;
 	return 0;
 }
 
 /*
  * Class:     printer_PrinterLibs
  * Method:    Port_Read
- * Signature: ([BCC)I
+ * Signature: ([BIJ)I
  */
 JNIEXPORT jint JNICALL Java_printer_PrinterLibs_Port_1Read
-(JNIEnv* env, jclass, jbyteArray jBuff, jchar jCnt, jchar jTimeout)
+(JNIEnv* env, jclass, jbyteArray jBuff, jint jCnt, jlong jTimeout)
 {
 	jint res = 0;
 
 	jbyte* bBuff = env->GetByteArrayElements(jBuff, 0);
 
 	unsigned char* ucbuf = (unsigned char*)bBuff;
-	res = pos.Read(ucbuf, jCnt, jTimeout);
+	res = pos.Read(ucbuf, (size_t)jCnt, (long)jTimeout);
+
+	env->ReleaseByteArrayElements(jBuff, bBuff, 0);
 	return res;
 }
 
@@ -172,29 +173,23 @@ JNIEXPORT void JNICALL Java_printer_PrinterLibs_Port_1Close
 JNIEXPORT void JNICALL Java_printer_PrinterLibs_Port_1EnumCom
 (JNIEnv* env, jclass obj, jbyteArray byte_arr_buff, jint nBuff, jobject out_obj_needed, jobject out_obj_ret)
 {
-	jboolean isCopy = JNI_FALSE;
-
 	size_t required_size;
 	if (byte_arr_buff != NULL) {
-		jbyte* jbyte_buff = env->GetByteArrayElements(byte_arr_buff, &isCopy);
-		jsize jbuff_size = env->GetArrayLength(byte_arr_buff);
-
 		size_t len = (int)nBuff;
 		char* buff = new char[len];
 
 		memset(buff, 0x0, len);
 		if ((buff) != NULL) {
 			nzComIOEnumerator.Enumerate(buff, len, &required_size);
-			for (int j = 0; j < jbuff_size; j++) {
-				jbyte_buff[j] = buff[j];
-			}
+			env->SetByteArrayRegion(byte_arr_buff, 0, nBuff, (jbyte*)buff);
 
 			jclass obj_needed = env->GetObjectClass(out_obj_needed);
 			jfieldID fid_needed = env->GetFieldID(obj_needed, "refValue", "I");
 			env->SetIntField(out_obj_needed, fid_needed, required_size);
+
+			env->DeleteLocalRef(obj_needed);
 		}
 		delete []buff;
-		env->ReleaseByteArrayElements(byte_arr_buff, jbyte_buff, 0);
 	}
 	else {
 		char* buff = NULL;
@@ -204,6 +199,8 @@ JNIEXPORT void JNICALL Java_printer_PrinterLibs_Port_1EnumCom
 		jclass obj_needed = env->GetObjectClass(out_obj_needed);
 		jfieldID fid_needed = env->GetFieldID(obj_needed, "refValue", "I");
 		env->SetIntField(out_obj_needed, fid_needed, required_size);
+
+		env->DeleteLocalRef(obj_needed);
 	}
 
 	jint jint_returned = required_size;
@@ -211,6 +208,7 @@ JNIEXPORT void JNICALL Java_printer_PrinterLibs_Port_1EnumCom
 	jfieldID fid_returned = env->GetFieldID(obj_returned, "refValue", "I");
 	env->SetIntField(out_obj_ret, fid_returned, jint_returned);
 
+	env->DeleteLocalRef(obj_returned);
 	return;
 }
 
@@ -222,29 +220,22 @@ JNIEXPORT void JNICALL Java_printer_PrinterLibs_Port_1EnumCom
 JNIEXPORT void JNICALL Java_printer_PrinterLibs_Port_1EnumLpt
 (JNIEnv* env, jclass obj, jbyteArray byte_arr_buff, jint nBuff, jobject out_obj_needed, jobject out_obj_ret)
 {
-	jboolean isCopy = JNI_FALSE;
-
 	size_t required_size;
 	if (byte_arr_buff != NULL) {
-		jbyte* jbyte_buff = env->GetByteArrayElements(byte_arr_buff, &isCopy);
-		jsize jbuff_size = env->GetArrayLength(byte_arr_buff);
-
 		size_t len = (int)nBuff;
 		char* buff = new char[len];
 
 		memset(buff, 0x0, len);
 		if ((buff) != NULL) {
 			nzLptIOEnumerator.Enumerate(buff, len, &required_size);
-			for (int j = 0; j < jbuff_size; j++) {
-				jbyte_buff[j] = buff[j];
-			}
+			env->SetByteArrayRegion(byte_arr_buff, 0, nBuff, (jbyte*)buff);
 
 			jclass obj_needed = env->GetObjectClass(out_obj_needed);
 			jfieldID fid_needed = env->GetFieldID(obj_needed, "refValue", "I");
 			env->SetIntField(out_obj_needed, fid_needed, required_size);
+			env->DeleteLocalRef(obj_needed);
 		}
 		delete []buff;
-		env->ReleaseByteArrayElements(byte_arr_buff, jbyte_buff, 0);
 	}
 	else {
 		char* buff = NULL;
@@ -254,13 +245,14 @@ JNIEXPORT void JNICALL Java_printer_PrinterLibs_Port_1EnumLpt
 		jclass obj_needed = env->GetObjectClass(out_obj_needed);
 		jfieldID fid_needed = env->GetFieldID(obj_needed, "refValue", "I");
 		env->SetIntField(out_obj_needed, fid_needed, required_size);
+		env->DeleteLocalRef(obj_needed);
 	}
 
 	jint jint_returned = required_size;
 	jclass obj_returned = env->GetObjectClass(out_obj_ret);
 	jfieldID fid_returned = env->GetFieldID(obj_returned, "refValue", "I");
 	env->SetIntField(out_obj_ret, fid_returned, jint_returned);
-
+	env->DeleteLocalRef(obj_returned);
 	return;
 }
 
@@ -270,31 +262,24 @@ JNIEXPORT void JNICALL Java_printer_PrinterLibs_Port_1EnumLpt
  * Signature: ([BILprinter/PrinterRefInteger;Lprinter/PrinterRefInteger;)V
  */
 JNIEXPORT void JNICALL Java_printer_PrinterLibs_Port_1EnumUSB
-(JNIEnv* env, jclass obj, jbyteArray byte_arr_buff, jint nBuff, jobject out_obj_needed, jobject out_obj_ret)
+(JNIEnv *env, jclass obj, jbyteArray byte_arr_buff, jint nBuff, jobject out_obj_needed, jobject out_obj_ret)
 {
-	jboolean isCopy = JNI_FALSE;
-
 	size_t required_size;
 	if (byte_arr_buff != NULL) {
-		jbyte* jbyte_buff = env->GetByteArrayElements(byte_arr_buff, &isCopy);
-		jsize jbuff_size = env->GetArrayLength(byte_arr_buff);
-
 		size_t len = (int)nBuff;
 		char* buff = new char[len];
 
 		memset(buff, 0x0, len);
 		if ((buff) != NULL) {
 			nzUsbIOEnumerator.Enumerate(buff, len, &required_size);
-			for (int j = 0; j < jbuff_size; j++) {
-				jbyte_buff[j] = buff[j];
-			}
+			env->SetByteArrayRegion(byte_arr_buff, 0, nBuff, (jbyte*)buff);
 
 			jclass obj_needed = env->GetObjectClass(out_obj_needed);
 			jfieldID fid_needed = env->GetFieldID(obj_needed, "refValue", "I");
 			env->SetIntField(out_obj_needed, fid_needed, required_size);
+			env->DeleteLocalRef(obj_needed);
 		}
 		delete []buff;
-		env->ReleaseByteArrayElements(byte_arr_buff, jbyte_buff, 0);
 	}
 	else {
 		char* buff = NULL;
@@ -304,13 +289,14 @@ JNIEXPORT void JNICALL Java_printer_PrinterLibs_Port_1EnumUSB
 		jclass obj_needed = env->GetObjectClass(out_obj_needed);
 		jfieldID fid_needed = env->GetFieldID(obj_needed, "refValue", "I");
 		env->SetIntField(out_obj_needed, fid_needed, required_size);
+		env->DeleteLocalRef(obj_needed);
 	}
 
 	jint jint_returned = required_size;
 	jclass obj_returned = env->GetObjectClass(out_obj_ret);
 	jfieldID fid_returned = env->GetFieldID(obj_returned, "refValue", "I");
 	env->SetIntField(out_obj_ret, fid_returned, jint_returned);
-
+	env->DeleteLocalRef(obj_returned);
 	return;
 }
 
@@ -325,9 +311,7 @@ JNIEXPORT jboolean JNICALL Java_printer_PrinterLibs_POS_1TextOut
 	jboolean res = JNI_FALSE;
 
 	jboolean isCopy;
-	std::cout << "lib->POS_TextOut print_str:[" << print_str << "]" << endl;
 	const char *utf_str = env->GetStringUTFChars(print_str, &isCopy);
-	std::cout << "lib->POS_TextOut utf_str:[" << utf_str << "]" << endl;
 
 	// 1B 40
 	pos.POS_Reset();
@@ -439,7 +423,6 @@ JNIEXPORT jboolean JNICALL Java_printer_PrinterLibs_POS_1PrintPicture
 {
 	jboolean res = JNI_FALSE;
 
-	// no impl
 	return res;
 }
 
@@ -505,7 +488,8 @@ JNIEXPORT jboolean JNICALL Java_printer_PrinterLibs_POS_1QueryStatus
 	jclass obj_status = env->GetObjectClass(out_status);
 	jfieldID fid_status = env->GetFieldID(obj_status, "refValue", "J");
 	env->SetLongField(out_status, fid_status, lStatus);
-
+	
+	env->DeleteLocalRef(obj_status);
 	return res;
 }
 
@@ -525,6 +509,7 @@ JNIEXPORT jboolean JNICALL Java_printer_PrinterLibs_POS_1RTQueryStatus
 	jfieldID fid_status = env->GetFieldID(obj_status, "refValue", "I");
 	env->SetIntField(out_status, fid_status, IStatus);
 
+	env->DeleteLocalRef(obj_status);
 	res = (IStatus > 0) ? JNI_TRUE : JNI_FALSE;
 	return res;
 }
@@ -637,5 +622,5 @@ JNIEXPORT jboolean JNICALL Java_printer_PrinterLibs_POS_1HalfCutPaper
 JNIEXPORT jboolean JNICALL Java_printer_PrinterLibs_POS_1Beep
 (JNIEnv* env, jclass, jint nBeepCount, jint nBeepMillis)
 {
-	return pos.POS_Beep(nBeepCount, nBeepMillis) ? JNI_TRUE : JNI_FALSE;
+	return pos.POS_Beep(nBeepCount, nBeepMillis);
 }

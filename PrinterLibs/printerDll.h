@@ -42,18 +42,18 @@ JNIEXPORT jboolean JNICALL Java_printer_PrinterLibs_Port_1OpenLpt
 /*
  * Class:     printer_PrinterLibs
  * Method:    Port_Write
- * Signature: ([BCC)I
+ * Signature: ([BIJ)I
  */
 JNIEXPORT jint JNICALL Java_printer_PrinterLibs_Port_1Write
-  (JNIEnv *, jclass, jbyteArray, jchar, jchar);
+  (JNIEnv *, jclass, jbyteArray, jint, jlong);
 
 /*
  * Class:     printer_PrinterLibs
  * Method:    Port_Read
- * Signature: ([BCC)I
+ * Signature: ([BIJ)I
  */
 JNIEXPORT jint JNICALL Java_printer_PrinterLibs_Port_1Read
-  (JNIEnv *, jclass, jbyteArray, jchar, jchar);
+  (JNIEnv *, jclass, jbyteArray, jint, jlong);
 
 /*
  * Class:     printer_PrinterLibs
